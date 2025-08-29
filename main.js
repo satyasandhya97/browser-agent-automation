@@ -9,16 +9,20 @@ let page;
 
 const openBrowser = tool({
     name: "open_browser",
-    description: "Launches a Chromium browser and opens a blank page",
+    description: "Launches Google Chrome browser and opens a blank page",
     parameters: z.object({}),
     async execute() {
         if (!browser) {
-            browser = await chromium.launch({ headless: false });
+            browser = await chromium.launch({
+                headless: false,
+                channel: "chrome",
+            });
             page = await browser.newPage();
         }
-        return { success: true, message: "Browser launched successfully" };
+        return { success: true, message: "Chrome launched successfully" };
     },
 });
+
 
 const openURL = tool({
     name: "open_url",
@@ -41,10 +45,14 @@ const clickSelector = tool({
     }),
     async execute({ selector, timeoutMs }) {
         if (!page) throw new Error("No page. Call open_browser first.");
+
         await page.waitForSelector(selector, { timeout: timeoutMs, state: "visible" });
         const el = page.locator(selector).first();
         await el.scrollIntoViewIfNeeded();
-        await el.click();
+        await Promise.all([
+            page.waitForLoadState("domcontentloaded"),
+            el.click(),
+        ]);
         return { success: true, clicked: selector };
     },
 });
@@ -64,10 +72,7 @@ const fillInput = tool({
             await element.scrollIntoViewIfNeeded();
             await element.click({ clickCount: 3 });
             await page.keyboard.press("Backspace");
-            await page.waitForTimeout(200);
-
             await element.fill(text);
-            await page.waitForTimeout(300);
 
             const actualValue = await element.inputValue();
 
@@ -98,33 +103,35 @@ const takeScreenShot = tool({
 const websiteAutomationAgent = new Agent({
     name: "Website Automation Agent",
     model: "gpt-4.1-mini",
-    maxTurns: 40,
     instructions: `
         You are an automation agent performing signup on ChaiCode UI Vault.
 
-        ✅ CRITICAL: Use these selectors exactly
-        - First Name: input:nth-child(1)[type="text"]
-        - Last Name: input:nth-child(2)[type="text"]
+        ✅ Use these updated selectors (based on actual HTML):
+        - First Name: #firstName
+        - Last Name: #lastName
         - Email: input[type="email"]
-        - Password: input:nth-child(1)[type="password"]
-        - Confirm Password: input:nth-child(2)[type="password"]
+        - Password: #password
+        - Confirm Password: #confirmPassword
         - Submit Button: button:has-text("Create Account")
 
         🚀 Steps:
         1. Open browser and navigate to https://ui.chaicode.com
         2. Take initial screenshot
-        3. Click "Sign Up" in sidebar using: text="Sign Up"
-        4. Fill the form:
-           - First Name: Satyasandhya
-           - Last Name: Biswal
-           - Email: satyasandhyabiswal97@gmail.com
-           - Password: sandhya1234
-           - Confirm Password: sandhya1234
-        5. Verify each field is filled correctly
-        6. Take screenshot after filling form
-        7. Click "Create Account" button
-        8. Take final screenshot after submission
+        3. Click "Sign Up" in sidebar → selector: text="Sign Up"
+        4. Wait until form is visible: input[type="email"]
+        5. Fill the form:
+        - First Name: Sandhya
+        - Last Name: Biswal
+        - Email: satyasandhyabiswal97@gmail.com
+        - Password: 123456
+        - Confirm Password: 123456
+        6. Verify each field is filled correctly
+        7. Take screenshot after filling form
+        8. Click "Create Account" button
+        9. Take final screenshot after submission
+
     `,
+    maxTurns: 40,
     tools: [openBrowser, openURL, clickSelector, fillInput, takeScreenShot],
 });
 
@@ -134,11 +141,13 @@ const websiteAutomationAgent = new Agent({
         const result = await run(
             websiteAutomationAgent,
             `Automate Sign Up on https://ui.chaicode.com with:
-             First Name: Satyasandhya
+             First Name: Sandhya
              Last Name: Biswal
              Email: satyasandhyabiswal97@gmail.com
-             Password: sandhya1234
-             Confirm Password: sandhya1234`
+             Password: 123456
+             Confirm Password: 123456
+             `,
+            { maxTurns: 40 },
         );
         console.log("Final Result:", result?.output ?? result);
     } catch (err) {
