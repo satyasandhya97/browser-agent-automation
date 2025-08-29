@@ -120,7 +120,7 @@ const websiteAutomationAgent = new Agent({
         3. Click "Sign Up" in sidebar → selector: text="Sign Up"
         4. Wait until form is visible: input[type="email"]
         5. Fill the form:
-        - First Name: Sandhya
+        - First Name: Sinu
         - Last Name: Biswal
         - Email: satyasandhyabiswal97@gmail.com
         - Password: 123456
@@ -141,7 +141,7 @@ const websiteAutomationAgent = new Agent({
         const result = await run(
             websiteAutomationAgent,
             `Automate Sign Up on https://ui.chaicode.com with:
-             First Name: Sandhya
+             First Name: Sinu
              Last Name: Biswal
              Email: satyasandhyabiswal97@gmail.com
              Password: 123456
